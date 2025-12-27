@@ -91,8 +91,48 @@ func runScene2() {
 
     _ = console.log("Step 4: Shader program ready!")
 
-    // TODO: Create position buffer
+    // Step 5: Create position buffer
+    let positionBuffer = initPositionBuffer(gl: gl)
+    _ = console.log("Step 5: Position buffer created:", positionBuffer)
+
+    // TODO: Draw the scene
     _ = gl.clearColor(0.2, 0.2, 0.3, 1.0)
     let COLOR_BUFFER_BIT: Int32 = 0x0000_4000
     _ = gl.clear(COLOR_BUFFER_BIT)
+}
+
+// Initialize position buffer for the square
+@MainActor
+func initPositionBuffer(gl: JSValue) -> JSValue {
+    let console = JSObject.global.console
+
+    // Step 5.1: Create a buffer
+    let positionBuffer = gl.createBuffer()
+    _ = console.log("  Step 5.1: Created buffer:", positionBuffer)
+
+    // Step 5.2: Bind the buffer to ARRAY_BUFFER
+    let ARRAY_BUFFER: Int32 = 0x8892
+    _ = gl.bindBuffer(ARRAY_BUFFER, positionBuffer)
+    _ = console.log("  Step 5.2: Bound buffer to ARRAY_BUFFER")
+
+    // Step 5.3: Define vertex positions
+    let positions: [Float32] = [
+        1.0,  1.0,   // top right
+        -1.0,  1.0,   // top left
+        1.0, -1.0,   // bottom right
+        -1.0, -1.0,   // bottom left
+    ]
+    _ = console.log("  Step 5.3: Defined positions (count:", positions.count, ")")
+
+    // Step 5.4: Create Float32Array from positions
+    _ = console.log("  Step 5.4: Creating Float32Array...")
+    let positionsArray = JSTypedArray<Float32>(positions)
+    _ = console.log("  Step 5.4: Created Float32Array:", positionsArray.jsObject)
+
+    // Step 5.5: Upload data to GPU
+    let STATIC_DRAW: Int32 = 0x88E4
+    _ = gl.bufferData(ARRAY_BUFFER, positionsArray, STATIC_DRAW)
+    _ = console.log("  Step 5.5: Uploaded data to GPU")
+
+    return positionBuffer
 }
