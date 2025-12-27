@@ -10,7 +10,6 @@ func runScene2() {
     let canvasElement = document.getElementById("canvas-scene2")
     let gl = canvasElement.getContext("webgl")
 
-    // Define shader sources
     let vsSource = """
     attribute vec4 aVertexPosition;
     uniform mat4 uModelViewMatrix;
@@ -26,36 +25,38 @@ func runScene2() {
     }
     """
 
-    // Create and compile vertex shader
-    let VERTEX_SHADER: Int32 = 0x8B31
-    let vertexShader = gl.createShader(VERTEX_SHADER)
-    _ = gl.shaderSource(vertexShader, vsSource)
-    _ = gl.compileShader(vertexShader)
-
-    let COMPILE_STATUS: Int32 = 0x8B81
-    let vCompiled = gl.getShaderParameter(vertexShader, COMPILE_STATUS)
-
-    guard let compiled = vCompiled.boolean, compiled else {
-        let info = gl.getShaderInfoLog(vertexShader)
-        _ = console.error("Vertex shader compilation failed:", info)
+    guard let shaderProgram = initShaderProgram(gl: gl, vsSource: vsSource, fsSource: fsSource) else {
+        _ = console.error("Failed to initialize shader program")
         return
     }
 
-    // Create and compile fragment shader
-    let FRAGMENT_SHADER: Int32 = 0x8B30
-    let fragmentShader = gl.createShader(FRAGMENT_SHADER)
-    _ = gl.shaderSource(fragmentShader, fsSource)
-    _ = gl.compileShader(fragmentShader)
+    let positionBuffer = initPositionBuffer(gl: gl)
 
-    let fCompiled = gl.getShaderParameter(fragmentShader, COMPILE_STATUS)
+    let programInfo = (
+        program: shaderProgram,
+        vertexPosition: gl.getAttribLocation(shaderProgram, "aVertexPosition"),
+        uniformLocations: (
+            projectionMatrix: gl.getUniformLocation(shaderProgram, "uProjectionMatrix"),
+            modelViewMatrix: gl.getUniformLocation(shaderProgram, "uModelViewMatrix")
+        )
+    )
 
-    guard let fCompiledBool = fCompiled.boolean, fCompiledBool else {
-        let info = gl.getShaderInfoLog(fragmentShader)
-        _ = console.error("Fragment shader compilation failed:", info)
-        return
+    drawScene(gl: gl, programInfo: programInfo, positionBuffer: positionBuffer)
+}
+
+// Initialize shader program
+@MainActor
+private func initShaderProgram(gl: JSValue, vsSource: String, fsSource: String) -> JSValue? {
+    let console = JSObject.global.console
+
+    guard let vertexShader = compileShader(gl: gl, type: 0x8B31, source: vsSource) else {
+        return nil
     }
 
-    // Create and link shader program
+    guard let fragmentShader = compileShader(gl: gl, type: 0x8B30, source: fsSource) else {
+        return nil
+    }
+
     let shaderProgram = gl.createProgram()
     _ = gl.attachShader(shaderProgram, vertexShader)
     _ = gl.attachShader(shaderProgram, fragmentShader)
@@ -67,32 +68,38 @@ func runScene2() {
     guard let linkedBool = linked.boolean, linkedBool else {
         let info = gl.getProgramInfoLog(shaderProgram)
         _ = console.error("Shader program linking failed:", info)
-        return
+        return nil
     }
 
-    // Create position buffer
-    let positionBuffer = initPositionBuffer(gl: gl)
+    return shaderProgram
+}
 
-    // Get attribute and uniform locations
-    let vertexPosition = gl.getAttribLocation(shaderProgram, "aVertexPosition")
-    let projectionMatrix = gl.getUniformLocation(shaderProgram, "uProjectionMatrix")
-    let modelViewMatrix = gl.getUniformLocation(shaderProgram, "uModelViewMatrix")
+// Compile a shader
+@MainActor
+private func compileShader(gl: JSValue, type: Int32, source: String) -> JSValue? {
+    let console = JSObject.global.console
 
-    // Draw the scene
-    drawScene(
-        gl: gl,
-        programInfo: (
-            program: shaderProgram,
-            vertexPosition: vertexPosition,
-            uniformLocations: (projectionMatrix: projectionMatrix, modelViewMatrix: modelViewMatrix)
-        ),
-        positionBuffer: positionBuffer
-    )
+    let shader = gl.createShader(type)
+    _ = gl.shaderSource(shader, source)
+    _ = gl.compileShader(shader)
+
+    let COMPILE_STATUS: Int32 = 0x8B81
+    let compiled = gl.getShaderParameter(shader, COMPILE_STATUS)
+
+    guard let compiledBool = compiled.boolean, compiledBool else {
+        let info = gl.getShaderInfoLog(shader)
+        let shaderType = type == 0x8B31 ? "vertex" : "fragment"
+        _ = console.error("\(shaderType) shader compilation failed:", info)
+        _ = gl.deleteShader(shader)
+        return nil
+    }
+
+    return shader
 }
 
 // Initialize position buffer for the square
 @MainActor
-func initPositionBuffer(gl: JSValue) -> JSValue {
+private func initPositionBuffer(gl: JSValue) -> JSValue {
     let positionBuffer = gl.createBuffer()
 
     let ARRAY_BUFFER: Int32 = 0x8892
@@ -115,7 +122,7 @@ func initPositionBuffer(gl: JSValue) -> JSValue {
 
 // Draw the scene
 @MainActor
-func drawScene(
+private func drawScene(
     gl: JSValue,
     programInfo: (
         program: JSValue,
@@ -126,7 +133,29 @@ func drawScene(
 ) {
     let console = JSObject.global.console
 
-    // Clear the canvas
+    clearCanvas(gl: gl)
+
+    guard let mat4 = JSObject.global.mat4.object else {
+        _ = console.error("mat4 not found! Make sure gl-matrix is loaded.")
+        return
+    }
+
+    let projectionMatrix = createProjectionMatrix(gl: gl, mat4: mat4)
+    let modelViewMatrix = createModelViewMatrix(mat4: mat4)
+
+    setPositionAttribute(gl: gl, positionBuffer: positionBuffer, vertexPosition: programInfo.vertexPosition)
+
+    _ = gl.useProgram(programInfo.program)
+    setUniforms(gl: gl, uniformLocations: programInfo.uniformLocations, projectionMatrix: projectionMatrix, modelViewMatrix: modelViewMatrix)
+
+    let TRIANGLE_STRIP: Int32 = 0x0005
+    let vertexCount: Int32 = 4
+    _ = gl.drawArrays(TRIANGLE_STRIP, 0, vertexCount)
+}
+
+// Clear the canvas
+@MainActor
+private func clearCanvas(gl: JSValue) {
     _ = gl.clearColor(0.0, 0.0, 0.0, 1.0)
     _ = gl.clearDepth(1.0)
     _ = gl.enable(0x0B71) // DEPTH_TEST
@@ -135,13 +164,11 @@ func drawScene(
     let COLOR_BUFFER_BIT: Int32 = 0x0000_4000
     let DEPTH_BUFFER_BIT: Int32 = 0x0000_0100
     _ = gl.clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT)
+}
 
-    // Create projection matrix using gl-matrix
-    guard let mat4 = JSObject.global.mat4.object else {
-        _ = console.error("mat4 not found! Make sure gl-matrix is loaded.")
-        return
-    }
-
+// Create projection matrix
+@MainActor
+private func createProjectionMatrix(gl: JSValue, mat4: JSObject) -> JSValue {
     let projectionMatrix = mat4.create!()
     let fieldOfView: Float = 45 * .pi / 180
     let canvas = gl.canvas.object!
@@ -149,16 +176,24 @@ func drawScene(
     let zNear: Float = 0.1
     let zFar: Float = 100.0
     _ = mat4.perspective!(projectionMatrix, fieldOfView, aspect, zNear, zFar)
+    return projectionMatrix
+}
 
-    // Create model-view matrix
+// Create model-view matrix
+@MainActor
+private func createModelViewMatrix(mat4: JSObject) -> JSValue {
     let modelViewMatrix = mat4.create!()
     _ = mat4.translate!(
         modelViewMatrix,
         modelViewMatrix,
         JSObject.global.Array.object!.of!(-0.0, 0.0, -6.0)
     )
+    return modelViewMatrix
+}
 
-    // Bind position buffer and configure vertex attributes
+// Set position attribute
+@MainActor
+private func setPositionAttribute(gl: JSValue, positionBuffer: JSValue, vertexPosition: JSValue) {
     let ARRAY_BUFFER: Int32 = 0x8892
     _ = gl.bindBuffer(ARRAY_BUFFER, positionBuffer)
 
@@ -168,33 +203,18 @@ func drawScene(
     let stride: Int32 = 0
     let offset: Int32 = 0
 
-    _ = gl.vertexAttribPointer(
-        programInfo.vertexPosition,
-        numComponents,
-        type,
-        normalize,
-        stride,
-        offset
-    )
-    _ = gl.enableVertexAttribArray(programInfo.vertexPosition)
+    _ = gl.vertexAttribPointer(vertexPosition, numComponents, type, normalize, stride, offset)
+    _ = gl.enableVertexAttribArray(vertexPosition)
+}
 
-    // Use shader program and set uniforms
-    _ = gl.useProgram(programInfo.program)
-
-    _ = gl.uniformMatrix4fv(
-        programInfo.uniformLocations.projectionMatrix,
-        false,
-        projectionMatrix
-    )
-
-    _ = gl.uniformMatrix4fv(
-        programInfo.uniformLocations.modelViewMatrix,
-        false,
-        modelViewMatrix
-    )
-
-    // Draw the square
-    let TRIANGLE_STRIP: Int32 = 0x0005
-    let vertexCount: Int32 = 4
-    _ = gl.drawArrays(TRIANGLE_STRIP, 0, vertexCount)
+// Set uniform matrices
+@MainActor
+private func setUniforms(
+    gl: JSValue,
+    uniformLocations: (projectionMatrix: JSValue, modelViewMatrix: JSValue),
+    projectionMatrix: JSValue,
+    modelViewMatrix: JSValue
+) {
+    _ = gl.uniformMatrix4fv(uniformLocations.projectionMatrix, false, projectionMatrix)
+    _ = gl.uniformMatrix4fv(uniformLocations.modelViewMatrix, false, modelViewMatrix)
 }
