@@ -27,10 +27,28 @@ func runScene2() {
     """
 
     _ = console.log("Step 1: Shader sources defined")
-    _ = console.log("Vertex shader:", vsSource)
-    _ = console.log("Fragment shader:", fsSource)
 
-    // TODO: Compile shaders
+    // Step 2: Create and compile vertex shader
+    let VERTEX_SHADER: Int32 = 0x8B31
+    let vertexShader = gl.createShader(VERTEX_SHADER)
+    _ = console.log("Step 2: Created vertex shader:", vertexShader)
+
+    _ = gl.shaderSource(vertexShader, vsSource)
+    _ = gl.compileShader(vertexShader)
+    _ = console.log("Step 2: Compiled vertex shader")
+
+    // Check if compilation was successful
+    let COMPILE_STATUS: Int32 = 0x8B81
+    let vCompiled = gl.getShaderParameter(vertexShader, COMPILE_STATUS)
+    _ = console.log("Step 2: Vertex shader compiled successfully?", vCompiled)
+
+    guard let compiled = vCompiled.boolean, compiled else {
+        let info = gl.getShaderInfoLog(vertexShader)
+        _ = console.error("Vertex shader compilation failed:", info)
+        return
+    }
+
+    // TODO: Compile fragment shader
     _ = gl.clearColor(0.2, 0.2, 0.3, 1.0)
     let COLOR_BUFFER_BIT: Int32 = 0x0000_4000
     _ = gl.clear(COLOR_BUFFER_BIT)
