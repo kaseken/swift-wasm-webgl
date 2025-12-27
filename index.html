@@ -2,14 +2,24 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>WebGL Demo - Swift WASM</title>
+    <title>WebGL Demo in Swift WASM</title>
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"
+        integrity="sha512-zhHQR0/H5SEBL3Wn6yYSaTTZej12z0hVZKOv3TwCUXT1z5qeqGcXJLLrbERYRScEDDpYIJhPC1fk31gqR783iQ=="
+        crossorigin="anonymous"
+        defer>
+    </script>
     <script type="module">
         import { init } from "./.build/plugins/PackageToJS/outputs/Package/index.js";
         init();
     </script>
 </head>
 <body>
-    <h1>WebGL Demo - Swift WASM</h1>
-    <canvas id="gl-canvas" width="640" height="480"></canvas>
+    <h1>WebGL Demo in Swift WASM</h1>
+    <div class="canvas-container">
+        <div class="scene">
+            <canvas id="canvas" width="640" height="480"></canvas>
+        </div>
+    </div>
 </body>
 </html>
