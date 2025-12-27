@@ -2,14 +2,28 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>WebGL Demo - Swift WASM</title>
+    <title>WebGL in Swift WASM</title>
+    <style>
+        .canvas-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+    </style>
     <script type="module">
         import { init } from "./.build/plugins/PackageToJS/outputs/Package/index.js";
         init();
     </script>
 </head>
 <body>
-    <h1>WebGL Demo - Swift WASM</h1>
-    <canvas id="gl-canvas" width="640" height="480"></canvas>
+    <h1>WebGL in Swift WASM</h1>
+    <div class="canvas-container">
+        <div class="scene">
+            <canvas id="canvas-scene1" width="640" height="480"></canvas>
+        </div>
+        <div class="scene">
+            <canvas id="canvas-scene2" width="640" height="480"></canvas>
+        </div>
+    </div>
 </body>
 </html>
