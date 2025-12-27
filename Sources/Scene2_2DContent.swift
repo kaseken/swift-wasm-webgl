@@ -67,7 +67,31 @@ func runScene2() {
         return
     }
 
-    // TODO: Link shader program
+    // Step 4: Create and link shader program
+    let shaderProgram = gl.createProgram()
+    _ = console.log("Step 4: Created shader program:", shaderProgram)
+
+    _ = gl.attachShader(shaderProgram, vertexShader)
+    _ = gl.attachShader(shaderProgram, fragmentShader)
+    _ = console.log("Step 4: Attached shaders to program")
+
+    _ = gl.linkProgram(shaderProgram)
+    _ = console.log("Step 4: Linked program")
+
+    // Check if linking was successful
+    let LINK_STATUS: Int32 = 0x8B82
+    let linked = gl.getProgramParameter(shaderProgram, LINK_STATUS)
+    _ = console.log("Step 4: Program linked successfully?", linked)
+
+    guard let linkedBool = linked.boolean, linkedBool else {
+        let info = gl.getProgramInfoLog(shaderProgram)
+        _ = console.error("Shader program linking failed:", info)
+        return
+    }
+
+    _ = console.log("Step 4: Shader program ready!")
+
+    // TODO: Create position buffer
     _ = gl.clearColor(0.2, 0.2, 0.3, 1.0)
     let COLOR_BUFFER_BIT: Int32 = 0x0000_4000
     _ = gl.clear(COLOR_BUFFER_BIT)
