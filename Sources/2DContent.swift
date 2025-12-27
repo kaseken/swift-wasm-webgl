@@ -1,8 +1,5 @@
 import JavaScriptKit
 
-// Tutorial 2: Adding 2D content to a WebGL context
-// https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Tutorial/Adding_2D_content_to_a_WebGL_context
-
 @MainActor
 func run2DContent() {
     let console = JSObject.global.console
