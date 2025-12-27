@@ -1,4 +1,3 @@
 import JavaScriptKit
 
-runScene1()
-runScene2()
+run2DContent()

@@ -4,10 +4,10 @@ import JavaScriptKit
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Tutorial/Adding_2D_content_to_a_WebGL_context
 
 @MainActor
-func runScene2() {
+func run2DContent() {
     let console = JSObject.global.console
     let document = JSObject.global.document
-    let canvasElement = document.getElementById("canvas-scene2")
+    let canvasElement = document.getElementById("canvas")
     let gl = canvasElement.getContext("webgl")
 
     let vsSource = """
@@ -37,8 +37,8 @@ func runScene2() {
         vertexPosition: gl.getAttribLocation(shaderProgram, "aVertexPosition"),
         uniformLocations: (
             projectionMatrix: gl.getUniformLocation(shaderProgram, "uProjectionMatrix"),
-            modelViewMatrix: gl.getUniformLocation(shaderProgram, "uModelViewMatrix")
-        )
+            modelViewMatrix: gl.getUniformLocation(shaderProgram, "uModelViewMatrix"),
+        ),
     )
 
     drawScene(gl: gl, programInfo: programInfo, positionBuffer: positionBuffer)
@@ -106,8 +106,8 @@ private func initPositionBuffer(gl: JSValue) -> JSValue {
     _ = gl.bindBuffer(ARRAY_BUFFER, positionBuffer)
 
     let positions: [Float32] = [
-        1.0,  1.0,
-        -1.0,  1.0,
+        1.0, 1.0,
+        -1.0, 1.0,
         1.0, -1.0,
         -1.0, -1.0,
     ]
@@ -127,9 +127,9 @@ private func drawScene(
     programInfo: (
         program: JSValue,
         vertexPosition: JSValue,
-        uniformLocations: (projectionMatrix: JSValue, modelViewMatrix: JSValue)
+        uniformLocations: (projectionMatrix: JSValue, modelViewMatrix: JSValue),
     ),
-    positionBuffer: JSValue
+    positionBuffer: JSValue,
 ) {
     let console = JSObject.global.console
 
@@ -186,7 +186,7 @@ private func createModelViewMatrix(mat4: JSObject) -> JSValue {
     _ = mat4.translate!(
         modelViewMatrix,
         modelViewMatrix,
-        JSObject.global.Array.object!.of!(-0.0, 0.0, -6.0)
+        JSObject.global.Array.object!.of!(-0.0, 0.0, -6.0),
     )
     return modelViewMatrix
 }
@@ -213,7 +213,7 @@ private func setUniforms(
     gl: JSValue,
     uniformLocations: (projectionMatrix: JSValue, modelViewMatrix: JSValue),
     projectionMatrix: JSValue,
-    modelViewMatrix: JSValue
+    modelViewMatrix: JSValue,
 ) {
     _ = gl.uniformMatrix4fv(uniformLocations.projectionMatrix, false, projectionMatrix)
     _ = gl.uniformMatrix4fv(uniformLocations.modelViewMatrix, false, modelViewMatrix)
