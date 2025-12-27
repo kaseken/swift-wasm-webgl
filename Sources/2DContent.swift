@@ -9,16 +9,20 @@ func run2DContent() {
 
     let vsSource = """
     attribute vec4 aVertexPosition;
+    attribute vec4 aVertexColor;
     uniform mat4 uModelViewMatrix;
     uniform mat4 uProjectionMatrix;
+    varying lowp vec4 vColor;
     void main() {
         gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+        vColor = aVertexColor;
     }
     """
 
     let fsSource = """
+    varying lowp vec4 vColor;
     void main() {
-        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+        gl_FragColor = vColor;
     }
     """
 
@@ -28,17 +32,19 @@ func run2DContent() {
     }
 
     let positionBuffer = initPositionBuffer(gl: gl)
+    let colorBuffer = initColorBuffer(gl: gl)
 
     let programInfo = (
         program: shaderProgram,
         vertexPosition: gl.getAttribLocation(shaderProgram, "aVertexPosition"),
+        vertexColor: gl.getAttribLocation(shaderProgram, "aVertexColor"),
         uniformLocations: (
             projectionMatrix: gl.getUniformLocation(shaderProgram, "uProjectionMatrix"),
             modelViewMatrix: gl.getUniformLocation(shaderProgram, "uModelViewMatrix"),
         ),
     )
 
-    drawScene(gl: gl, programInfo: programInfo, positionBuffer: positionBuffer)
+    drawScene(gl: gl, programInfo: programInfo, buffers: (position: positionBuffer, color: colorBuffer))
 }
 
 // Initialize shader program
@@ -117,6 +123,29 @@ private func initPositionBuffer(gl: JSValue) -> JSValue {
     return positionBuffer
 }
 
+// Initialize color buffer for the square
+@MainActor
+private func initColorBuffer(gl: JSValue) -> JSValue {
+    let colorBuffer = gl.createBuffer()
+
+    let ARRAY_BUFFER: Int32 = 0x8892
+    _ = gl.bindBuffer(ARRAY_BUFFER, colorBuffer)
+
+    let colors: [Float32] = [
+        1.0, 1.0, 1.0, 1.0, // white
+        1.0, 0.0, 0.0, 1.0, // red
+        0.0, 1.0, 0.0, 1.0, // green
+        0.0, 0.0, 1.0, 1.0, // blue
+    ]
+
+    let colorsArray = JSTypedArray<Float32>(colors)
+
+    let STATIC_DRAW: Int32 = 0x88E4
+    _ = gl.bufferData(ARRAY_BUFFER, colorsArray, STATIC_DRAW)
+
+    return colorBuffer
+}
+
 // Draw the scene
 @MainActor
 private func drawScene(
@@ -124,9 +153,10 @@ private func drawScene(
     programInfo: (
         program: JSValue,
         vertexPosition: JSValue,
+        vertexColor: JSValue,
         uniformLocations: (projectionMatrix: JSValue, modelViewMatrix: JSValue),
     ),
-    positionBuffer: JSValue,
+    buffers: (position: JSValue, color: JSValue),
 ) {
     let console = JSObject.global.console
 
@@ -140,7 +170,8 @@ private func drawScene(
     let projectionMatrix = createProjectionMatrix(gl: gl, mat4: mat4)
     let modelViewMatrix = createModelViewMatrix(mat4: mat4)
 
-    setPositionAttribute(gl: gl, positionBuffer: positionBuffer, vertexPosition: programInfo.vertexPosition)
+    setPositionAttribute(gl: gl, positionBuffer: buffers.position, vertexPosition: programInfo.vertexPosition)
+    setColorAttribute(gl: gl, colorBuffer: buffers.color, vertexColor: programInfo.vertexColor)
 
     _ = gl.useProgram(programInfo.program)
     setUniforms(gl: gl, uniformLocations: programInfo.uniformLocations, projectionMatrix: projectionMatrix, modelViewMatrix: modelViewMatrix)
@@ -202,6 +233,22 @@ private func setPositionAttribute(gl: JSValue, positionBuffer: JSValue, vertexPo
 
     _ = gl.vertexAttribPointer(vertexPosition, numComponents, type, normalize, stride, offset)
     _ = gl.enableVertexAttribArray(vertexPosition)
+}
+
+// Set color attribute
+@MainActor
+private func setColorAttribute(gl: JSValue, colorBuffer: JSValue, vertexColor: JSValue) {
+    let ARRAY_BUFFER: Int32 = 0x8892
+    _ = gl.bindBuffer(ARRAY_BUFFER, colorBuffer)
+
+    let numComponents: Int32 = 4
+    let type: Int32 = 0x1406 // FLOAT
+    let normalize = false
+    let stride: Int32 = 0
+    let offset: Int32 = 0
+
+    _ = gl.vertexAttribPointer(vertexColor, numComponents, type, normalize, stride, offset)
+    _ = gl.enableVertexAttribArray(vertexColor)
 }
 
 // Set uniform matrices
